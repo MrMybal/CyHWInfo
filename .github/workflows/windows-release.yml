@@ -2,6 +2,11 @@ name: Windows release
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish the selected version tag after the installer test
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
@@ -31,8 +36,10 @@ jobs:
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
+          PUBLISH_RELEASE: ${{ inputs.publish_release && 'true' || 'false' }}
         run: |
           $options = @{ CyUISourceDir = 'out/CyUI' }
+          if ($env:PUBLISH_RELEASE -eq 'true' -and $env:REF_TYPE -ne 'tag') { throw 'Select a version tag to publish a release.' }
           if ($env:REF_TYPE -eq 'tag') { $options.ReleaseTag = $env:REF_NAME }
           ./scripts/package-windows.ps1 @options
       - name: Verify setup and uninstall
@@ -61,7 +68,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && (github.event_name == 'push' || inputs.publish_release)
     needs: build
     runs-on: windows-2022
     permissions:

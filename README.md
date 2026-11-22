@@ -71,7 +71,7 @@ To include the advanced collector, add `LibreHardwareMonitor` to your selected c
 
 ### Package a Windows release
 
-Install Inno Setup 6 and run `./scripts/package-windows.ps1` with a CyUI checkout available. The installer is written to `out/windows-dist`. The **Windows release** workflow builds and tests the installer. A dispatch produces a test artifact. A push of a `vX.Y.Z` tag matching the CMake project version publishes a stable GitHub release.
+Install Inno Setup 6 and run `./scripts/package-windows.ps1` with a CyUI checkout available. The installer is written to `out/windows-dist`. The **Windows release** workflow builds and tests the installer. Push a `vX.Y.Z` tag matching the CMake project version to publish a stable GitHub release. For a manual run, select the tag and enable **Publish the selected version tag** to publish after the test.
 
 ---
 
