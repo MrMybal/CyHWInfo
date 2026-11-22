@@ -1,0 +1,11 @@
+if(NOT EXISTS "${bridge_source}/CyHWInfo.SensorBridge.exe")
+    message(FATAL_ERROR "The LibreHardwareMonitor sensor bridge is missing from '${bridge_source}'")
+endif()
+
+file(GLOB_RECURSE files LIST_DIRECTORIES FALSE RELATIVE "${bridge_source}" "${bridge_source}/*")
+foreach(file IN LISTS files)
+    set(destination "${bridge_destination}/${file}")
+    get_filename_component(directory "${destination}" DIRECTORY)
+    file(MAKE_DIRECTORY "${directory}")
+    file(COPY_FILE "${bridge_source}/${file}" "${destination}" ONLY_IF_DIFFERENT)
+endforeach()

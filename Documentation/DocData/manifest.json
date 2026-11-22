@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 1,
+  "name": "CyHWInfo",
+  "version": "0.1.0",
+  "defaultLocale": "en",
+  "locales": [
+    {
+      "code": "en",
+      "label": "English"
+    },
+    {
+      "code": "fr",
+      "label": "Français"
+    }
+  ],
+  "aliases": {},
+  "pages": [
+    {
+      "id": "integration",
+      "title": "Integrate the C++ library",
+      "description": "Build, link and sample independent CyHWInfo components.",
+      "section": "CyHWInfo",
+      "parent": "overview",
+      "order": 20,
+      "revision": "1",
+      "locale": "en",
+      "html": "<h2 id=\"build\">Build a component<a class=\"heading-anchor\" href=\"#/en/integration/build\" aria-label=\"Link to Build a component\">#</a></h2><p>Use CMake 3.22 or later, Git and a C++23 compiler. For the validated Windows configuration, use Visual Studio 2022 17.10 or later and a Windows SDK with the WDDM 2.4 and NVMe headers. CMake fetches the pinned <code>lfreist/hwinfo</code> revision. Use <code>FETCHCONTENT_SOURCE_DIR_LFREIST_HWINFO</code> to supply a local copy of that revision.</p>\n<p>Run these commands from the CyHWInfo checkout to build GPU inventory and sampled telemetry.</p>\n<div class=\"code-block\"><div class=\"code-toolbar\"><span>powershell</span><button type=\"button\" data-copy-code>Copy</button></div><pre><code class=\"language-powershell\"><span class=\"code-line\" id=\"L1\" data-line=\"1\">cmake -S . -B out/gpu &quot;-DCYHWINFO_COMPONENTS=Gpu;GpuTelemetry&quot;</span><span class=\"code-line\" id=\"L2\" data-line=\"2\">cmake --build out/gpu --config Release</span><span class=\"code-line\" id=\"L3\" data-line=\"3\">cmake --install out/gpu --config Release --prefix out/install-gpu</span></code></pre></div><p>Add the installation prefix to <code>CMAKE_PREFIX_PATH</code> in the consuming project.</p>\n<div class=\"code-block\"><div class=\"code-toolbar\"><span>cmake</span><button type=\"button\" data-copy-code>Copy</button></div><pre><code class=\"language-cmake\"><span class=\"code-line\" id=\"code-2-L1\" data-line=\"1\"><span class=\"token keyword\">find_package</span><span class=\"token punctuation\">(</span>CyHWInfo CONFIG REQUIRED COMPONENTS Gpu GpuTelemetry<span class=\"token punctuation\">)</span></span><span class=\"code-line\" id=\"code-2-L2\" data-line=\"2\"><span class=\"token keyword\">target_link_libraries</span><span class=\"token punctuation\">(</span>my_app <span class=\"token namespace\">PRIVATE</span> <span class=\"token inserted class-name\">CyHWInfo::Gpu</span> <span class=\"token inserted class-name\">CyHWInfo::GpuTelemetry</span><span class=\"token punctuation\">)</span></span></code></pre></div><p>The selectable collectors are <code>Cpu</code>, <code>Gpu</code>, <code>GpuTelemetry</code>, <code>GpuProcesses</code>, <code>Memory</code>, <code>Storage</code>, <code>StorageHealth</code>, <code>Motherboard</code>, <code>Battery</code>, <code>Network</code> and the optional Windows <code>LibreHardwareMonitor</code>. The package also exports <code>Core</code> and <code>All</code>. GPU telemetry and process counters enable <code>Gpu</code> automatically, and <code>StorageHealth</code> enables <code>Storage</code>.</p>\n<h2 id=\"readings\">Read hardware values<a class=\"heading-anchor\" href=\"#/en/integration/readings\" aria-label=\"Link to Read hardware values\">#</a></h2><p>Include the corresponding public header under <code>&lt;cyhwinfo/&gt;</code>. Call <code>gpu::enumerate()</code> to discover adapters and pass their IDs to <code>gpu::Sampler::open()</code> from <code>&lt;cyhwinfo/gpu_telemetry.hpp&gt;</code>. Keep one sampler per adapter and allow time between polls for rate counters. Inspect <code>Result</code> before reading its value. Each <code>Reading</code> carries an optional value, a status and its source.</p>\n<p>WDDM adapter IDs are scoped to the current boot. Native D3DKMT power percentages and vendor-backed watt readings are separate. Windows storage health covers direct NVMe and SATA when the driver exposes SMART passthrough. Refresh the inventory after reconnecting a drive.</p>\n<h2 id=\"advanced-groups\">Select advanced groups<a class=\"heading-anchor\" href=\"#/en/integration/advanced-groups\" aria-label=\"Link to Select advanced groups\">#</a></h2><p>Link <code>CyHWInfo::LibreHardwareMonitor</code> and call <code>cyhwinfo_deploy_libre_hardware_monitor(my_app)</code> for the executable target. The build needs the .NET SDK and the deployed helper uses .NET 8. See <a href=\"#/en/monitoring/advanced-sensors\">advanced sensors</a> for driver access.</p>\n<div class=\"code-block\"><div class=\"code-toolbar\"><span>cpp</span><button type=\"button\" data-copy-code>Copy</button></div><pre><code class=\"language-cpp\"><span class=\"code-line\" id=\"code-3-L1\" data-line=\"1\"><span class=\"token macro property\"><span class=\"token directive-hash\">#</span><span class=\"token directive keyword\">include</span> <span class=\"token string\">&lt;cyhwinfo/sensors.hpp></span></span></span><span class=\"code-line\" id=\"code-3-L2\" data-line=\"2\"> </span><span class=\"code-line\" id=\"code-3-L3\" data-line=\"3\"><span class=\"token keyword\">auto</span> sampler <span class=\"token operator\">=</span> cyhwinfo<span class=\"token double-colon punctuation\">::</span>sensors<span class=\"token double-colon punctuation\">::</span><span class=\"token class-name\">Sampler</span><span class=\"token double-colon punctuation\">::</span><span class=\"token function\">open</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">{</span></span><span class=\"code-line\" id=\"code-3-L4\" data-line=\"4\">    <span class=\"token punctuation\">.</span>cpu <span class=\"token operator\">=</span> <span class=\"token boolean\">false</span><span class=\"token punctuation\">,</span> <span class=\"token punctuation\">.</span>motherboard <span class=\"token operator\">=</span> <span class=\"token boolean\">false</span><span class=\"token punctuation\">,</span> <span class=\"token punctuation\">.</span>memory <span class=\"token operator\">=</span> <span class=\"token boolean\">true</span></span><span class=\"code-line\" id=\"code-3-L5\" data-line=\"5\"><span class=\"token punctuation\">}</span><span class=\"token punctuation\">)</span><span class=\"token punctuation\">;</span></span><span class=\"code-line\" id=\"code-3-L6\" data-line=\"6\"><span class=\"token keyword\">if</span> <span class=\"token punctuation\">(</span>sampler<span class=\"token punctuation\">)</span> <span class=\"token punctuation\">{</span></span><span class=\"code-line\" id=\"code-3-L7\" data-line=\"7\">    <span class=\"token keyword\">auto</span> sample <span class=\"token operator\">=</span> sampler<span class=\"token operator\">-></span><span class=\"token function\">sample</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span><span class=\"token punctuation\">;</span></span><span class=\"code-line\" id=\"code-3-L8\" data-line=\"8\">    <span class=\"token keyword\">if</span> <span class=\"token punctuation\">(</span>sample <span class=\"token operator\">&amp;&amp;</span> sample<span class=\"token operator\">-></span>memory<span class=\"token punctuation\">)</span> <span class=\"token punctuation\">{</span></span><span class=\"code-line\" id=\"code-3-L9\" data-line=\"9\">        <span class=\"token keyword\">const</span> <span class=\"token keyword\">auto</span><span class=\"token operator\">&amp;</span> readings <span class=\"token operator\">=</span> sample<span class=\"token operator\">-></span>memory<span class=\"token operator\">-></span>sensors<span class=\"token punctuation\">;</span></span><span class=\"code-line\" id=\"code-3-L10\" data-line=\"10\">        <span class=\"token comment\">// Render the values available in readings.</span></span><span class=\"code-line\" id=\"code-3-L11\" data-line=\"11\">    <span class=\"token punctuation\">}</span></span><span class=\"code-line\" id=\"code-3-L12\" data-line=\"12\"><span class=\"token punctuation\">}</span></span></code></pre></div><p>The sample also reports whether PawnIO is installed and accessible. A group is absent if its option is disabled. Keep the sampler alive between subsequent polls.</p>\n<h2 id=\"dashboard\">Embed the dashboard<a class=\"heading-anchor\" href=\"#/en/integration/dashboard\" aria-label=\"Link to Embed the dashboard\">#</a></h2><p>Enable <code>CYHWINFO_BUILD_UI</code> and provide <code>CyUI::Core</code> or an accessible CyImgui_Interface checkout. Link <code>CyHWInfo::UI</code>. For an installed UI archive, use a matching CyUI and ImGui build. Set <code>CYHWINFO_BUILD_APP</code> to build the Win32/Direct3D 11 monitor.</p>\n<p>After creating the host ImGui context and initializing CyUI, call <code>cyhwinfo::ui::register_translations()</code>. Keep a <code>Monitor</code> and a <code>Dashboard</code>. Call <code>dashboard.draw(monitor)</code> in the host window, or use <code>dashboard.draw_panel(Page::sensors, *monitor.snapshot())</code> to embed only the sensor table. The monitor polls on a worker and publishes immutable snapshots.</p>\n",
+      "text": "Build a component # Use CMake 3.22 or later, Git and a C++23 compiler. For the validated Windows configuration, use Visual Studio 2022 17.10 or later and a Windows SDK with the WDDM 2.4 and NVMe headers. CMake fetches the pinned lfreist/hwinfo revision. Use FETCHCONTENT_SOURCE_DIR_LFREIST_HWINFO to supply a local copy of that revision. Run these commands from the CyHWInfo checkout to build GPU inventory and sampled telemetry. powershell Copy cmake -S . -B out/gpu \"-DCYHWINFO_COMPONENTS=Gpu;GpuTelemetry\" cmake --build out/gpu --config Release cmake --install out/gpu --config Release --prefix out/install-gpu Add the installation prefix to CMAKE_PREFIX_PATH in the consuming project. cmake Copy find_package ( CyHWInfo CONFIG REQUIRED COMPONENTS Gpu GpuTelemetry ) target_link_libraries ( my_app PRIVATE CyHWInfo::Gpu CyHWInfo::GpuTelemetry ) The selectable collectors are Cpu , Gpu , GpuTelemetry , GpuProcesses , Memory , Storage , StorageHealth , Motherboard , Battery , Network and the optional Windows LibreHardwareMonitor . The package also exports Core and All . GPU telemetry and process counters enable Gpu automatically, and StorageHealth enables Storage . Read hardware values # Include the corresponding public header under <cyhwinfo/> . Call gpu::enumerate() to discover adapters and pass their IDs to gpu::Sampler::open() from <cyhwinfo/gpu_telemetry.hpp> . Keep one sampler per adapter and allow time between polls for rate counters. Inspect Result before reading its value. Each Reading carries an optional value, a status and its source. WDDM adapter IDs are scoped to the current boot. Native D3DKMT power percentages and vendor-backed watt readings are separate. Windows storage health covers direct NVMe and SATA when the driver exposes SMART passthrough. Refresh the inventory after reconnecting a drive. Select advanced groups # Link CyHWInfo::LibreHardwareMonitor and call cyhwinfo_deploy_libre_hardware_monitor(my_app) for the executable target. The build needs the .NET SDK and the deployed helper uses .NET 8. See advanced sensors for driver access. cpp Copy # include <cyhwinfo/sensors.hpp> auto sampler = cyhwinfo :: sensors :: Sampler :: open ( { . cpu = false , . motherboard = false , . memory = true } ) ; if ( sampler ) { auto sample = sampler -> sample ( ) ; if ( sample && sample -> memory ) { const auto & readings = sample -> memory -> sensors ; // Render the values available in readings. } } The sample also reports whether PawnIO is installed and accessible. A group is absent if its option is disabled. Keep the sampler alive between subsequent polls. Embed the dashboard # Enable CYHWINFO_BUILD_UI and provide CyUI::Core or an accessible CyImgui_Interface checkout. Link CyHWInfo::UI . For an installed UI archive, use a matching CyUI and ImGui build. Set CYHWINFO_BUILD_APP to build the Win32/Direct3D 11 monitor. After creating the host ImGui context and initializing CyUI, call cyhwinfo::ui::register_translations() . Keep a Monitor and a Dashboard . Call dashboard.draw(monitor) in the host window, or use dashboard.draw_panel(Page::sensors, *monitor.snapshot()) to embed only the sensor table. The monitor polls on a worker and publishes immutable snapshots. cmake -S . -B out/gpu \"-DCYHWINFO_COMPONENTS=Gpu;GpuTelemetry\" cmake --build out/gpu --config Release cmake --install out/gpu --config Release --prefix out/install-gpu find_package(CyHWInfo CONFIG REQUIRED COMPONENTS Gpu GpuTelemetry) target_link_libraries(my_app PRIVATE CyHWInfo::Gpu CyHWInfo::GpuTelemetry) #include <cyhwinfo/sensors.hpp> auto sampler = cyhwinfo::sensors::Sampler::open({ .cpu = false, .motherboard = false, .memory = true }); if (sampler) { auto sample = sampler->sample(); if (sample && sample->memory) { const auto& readings = sample->memory->sensors; // Render the values available in readings. } }",
+      "headings": [
+        {
+          "id": "build",
+          "text": "Build a component",
+          "level": 2
+        },
+        {
+          "id": "readings",
+          "text": "Read hardware values",
+          "level": 2
+        },
+        {
+          "id": "advanced-groups",
+          "text": "Select advanced groups",
+          "level": 2
+        },
+        {
+          "id": "dashboard",
+          "text": "Embed the dashboard",
+          "level": 2
+        }
+      ],
+      "anchors": [
+        "L1",
+        "L2",
+        "L3",
+        "code-2-L1",
+        "code-2-L2",
+        "code-3-L1",
+        "code-3-L2",
+        "code-3-L3",
+        "code-3-L4",
+        "code-3-L5",
+        "code-3-L6",
+        "code-3-L7",
+        "code-3-L8",
+        "code-3-L9",
+        "code-3-L10",
+        "code-3-L11",
+        "code-3-L12"
+      ],
+      "languages": [
+        "powershell",
+        "cmake",
+        "cpp"
+      ],
+      "code": "cmake -S . -B out/gpu \"-DCYHWINFO_COMPONENTS=Gpu;GpuTelemetry\"\ncmake --build out/gpu --config Release\ncmake --install out/gpu --config Release --prefix out/install-gpu\nfind_package(CyHWInfo CONFIG REQUIRED COMPONENTS Gpu GpuTelemetry)\ntarget_link_libraries(my_app PRIVATE CyHWInfo::Gpu CyHWInfo::GpuTelemetry)\n#include <cyhwinfo/sensors.hpp>\n\nauto sampler = cyhwinfo::sensors::Sampler::open({\n    .cpu = false, .motherboard = false, .memory = true\n});\nif (sampler) {\n    auto sample = sampler->sample();\n    if (sample && sample->memory) {\n        const auto& readings = sample->memory->sensors;\n        // Render the values available in readings.\n    }\n}",
+      "assets": [],
+      "links": [
+        "#/en/monitoring/advanced-sensors"
+      ],
+      "kind": "guide"
+    },
+    {
+      "id": "monitoring",
+      "title": "Monitor hardware",
+      "description": "Read the Sensors table and enable optional Windows collectors.",
+      "section": "CyHWInfo",
+      "parent": "overview",
+      "order": 10,
+      "revision": "1",
+      "locale": "en",
+      "html": "<h2 id=\"sensor-table\">Sensors and statistics<a class=\"heading-anchor\" href=\"#/en/monitoring/sensor-table\" aria-label=\"Link to Sensors and statistics\">#</a></h2><p>Expand a device or measurement group in <strong>Sensors</strong>. The table shows <strong>Current</strong>, <strong>Minimum</strong>, <strong>Maximum</strong> and <strong>Average</strong>. Use the search field to find a device or sensor. <strong>Available only</strong> hides rows without a current reading. Hover over a sensor to see its source.</p>\n<figure data-cydoc-module=\"image\" data-cydoc-id=\"sensor-table-example\" data-config=\"{&quot;id&quot;:&quot;sensor-table-example&quot;,&quot;src&quot;:&quot;assets/sensors-en.png&quot;,&quot;alt&quot;:&quot;Sensor table with core C-state percentages and session statistics using demo data&quot;,&quot;caption&quot;:&quot;Sensor table with demonstration data&quot;,&quot;controls&quot;:&quot;minimal&quot;}\"><img src=\"assets/sensors-en.png\" alt=\"Sensor table with core C-state percentages and session statistics using demo data\" loading=\"lazy\" decoding=\"async\"></figure><p>Statistics use valid readings collected since the start of the session or the last <strong>Reset statistics</strong> action. Cached SMART readings count once per hardware read. Pause freezes collection. The reset clears the statistics while retaining the current reading. A dash indicates an unavailable reading. Zero is valid, for example for a stopped fan. Boolean flags show Yes or No and record their observed range.</p>\n<h2 id=\"advanced-sensors\">Advanced sensors on Windows<a class=\"heading-anchor\" href=\"#/en/monitoring/advanced-sensors\" aria-label=\"Link to Advanced sensors on Windows\">#</a></h2><ol>\n<li>Build the <code>LibreHardwareMonitor</code> component and deploy the <code>cyhwinfo-lhm</code> directory beside the executable. Install the .NET 8 Runtime for the helper.</li>\n<li>For readings that need hardware access, install the separately distributed <a href=\"https://pawnio.eu/\" target=\"_blank\" rel=\"noopener noreferrer\">signed PawnIO driver</a>. The Windows session must have access to its device. Administrator rights may be required.</li>\n<li>In the app, enable <strong>Settings → Advanced sensors</strong>. Turn this option off to continue with the standard collectors.</li>\n</ol>\n<p>Available readings depend on the hardware, firmware, drivers and access rights. LibreHardwareMonitor can provide CPU temperature and power and motherboard voltages, temperatures and fan speeds. On supported AMD Raphael systems, the optional provider adds live DDR5 controller timings and HTC, internal PROCHOT and external PROCHOT flags. The <code>0x00540004</code> SMU layout adds per-core temperatures, PPT/TDC/EDC limits and usage, aggregate DRAM read and write bandwidth, and per-core C0, C1 and C6 residency.</p>\n<p>The current <strong>Average active core count</strong> is the sum of the physical cores’ C0 fractions over a single SMU measurement window. Two cores that each spend half the interval in C0 contribute one active core on average. The <strong>Average</strong> column tracks the session average of those readings.</p>\n",
+      "text": "Sensors and statistics # Expand a device or measurement group in Sensors . The table shows Current , Minimum , Maximum and Average . Use the search field to find a device or sensor. Available only hides rows without a current reading. Hover over a sensor to see its source. Statistics use valid readings collected since the start of the session or the last Reset statistics action. Cached SMART readings count once per hardware read. Pause freezes collection. The reset clears the statistics while retaining the current reading. A dash indicates an unavailable reading. Zero is valid, for example for a stopped fan. Boolean flags show Yes or No and record their observed range. Advanced sensors on Windows # Build the LibreHardwareMonitor component and deploy the cyhwinfo-lhm directory beside the executable. Install the .NET 8 Runtime for the helper. For readings that need hardware access, install the separately distributed signed PawnIO driver . The Windows session must have access to its device. Administrator rights may be required. In the app, enable Settings → Advanced sensors . Turn this option off to continue with the standard collectors. Available readings depend on the hardware, firmware, drivers and access rights. LibreHardwareMonitor can provide CPU temperature and power and motherboard voltages, temperatures and fan speeds. On supported AMD Raphael systems, the optional provider adds live DDR5 controller timings and HTC, internal PROCHOT and external PROCHOT flags. The 0x00540004 SMU layout adds per-core temperatures, PPT/TDC/EDC limits and usage, aggregate DRAM read and write bandwidth, and per-core C0, C1 and C6 residency. The current Average active core count is the sum of the physical cores’ C0 fractions over a single SMU measurement window. Two cores that each spend half the interval in C0 contribute one active core on average. The Average column tracks the session average of those readings.",
+      "headings": [
+        {
+          "id": "sensor-table",
+          "text": "Sensors and statistics",
+          "level": 2
+        },
+        {
+          "id": "advanced-sensors",
+          "text": "Advanced sensors on Windows",
+          "level": 2
+        }
+      ],
+      "anchors": [],
+      "languages": [],
+      "code": "",
+      "assets": [
+        "assets/sensors-en.png"
+      ],
+      "links": [
+        "https://pawnio.eu/"
+      ],
+      "kind": "media"
+    },
+    {
+      "id": "overview",
+      "title": "Getting started",
+      "description": "Choose between the Windows monitor and the C++ library.",
+      "section": "CyHWInfo",
+      "order": 0,
+      "revision": "1",
+      "locale": "en",
+      "html": "<h2 id=\"what-you-can-build\">What you can build<a class=\"heading-anchor\" href=\"#/en/overview/what-you-can-build\" aria-label=\"Link to What you can build\">#</a></h2><p>CyHWInfo is a modular C++23 library for hardware inventory and sensor readings. Link the components your application needs, for example GPU inventory and telemetry. The optional CyUI module provides a dashboard that can be embedded in another application. The standalone Windows monitor uses the same dashboard and collectors.</p>\n<h2 id=\"open-the-monitor\">Open the monitor<a class=\"heading-anchor\" href=\"#/en/overview/open-the-monitor\" aria-label=\"Link to Open the monitor\">#</a></h2><p>In a Windows app build, launch <code>CyHWInfo.exe</code>. The app opens the <strong>Sensors</strong> page. Expand a component to see the devices and the available readings. Use <strong>Settings → Language</strong> to switch between English and French.</p>\n<p>The base collectors work without PawnIO. The optional advanced sensors can use PawnIO to read more CPU, motherboard and memory data on supported hardware. See <a href=\"#/en/monitoring/advanced-sensors\">advanced sensors</a> for setup and hardware coverage.</p>\n<h2 id=\"next\">Where to go next<a class=\"heading-anchor\" href=\"#/en/overview/next\" aria-label=\"Link to Where to go next\">#</a></h2><ul>\n<li><a href=\"#/en/monitoring/sensor-table\">Read sensor values and session statistics</a>.</li>\n<li><a href=\"#/en/integration/build\">Build the library and select CMake components</a>.</li>\n<li><a href=\"#/en/integration/dashboard\">Embed the dashboard</a>.</li>\n</ul>\n",
+      "text": "What you can build # CyHWInfo is a modular C++23 library for hardware inventory and sensor readings. Link the components your application needs, for example GPU inventory and telemetry. The optional CyUI module provides a dashboard that can be embedded in another application. The standalone Windows monitor uses the same dashboard and collectors. Open the monitor # In a Windows app build, launch CyHWInfo.exe . The app opens the Sensors page. Expand a component to see the devices and the available readings. Use Settings → Language to switch between English and French. The base collectors work without PawnIO. The optional advanced sensors can use PawnIO to read more CPU, motherboard and memory data on supported hardware. See advanced sensors for setup and hardware coverage. Where to go next # Read sensor values and session statistics . Build the library and select CMake components . Embed the dashboard .",
+      "headings": [
+        {
+          "id": "what-you-can-build",
+          "text": "What you can build",
+          "level": 2
+        },
+        {
+          "id": "open-the-monitor",
+          "text": "Open the monitor",
+          "level": 2
+        },
+        {
+          "id": "next",
+          "text": "Where to go next",
+          "level": 2
+        }
+      ],
+      "anchors": [],
+      "languages": [],
+      "code": "",
+      "assets": [],
+      "links": [
+        "#/en/monitoring/advanced-sensors",
+        "#/en/monitoring/sensor-table",
+        "#/en/integration/build",
+        "#/en/integration/dashboard"
+      ],
+      "kind": "guide"
+    },
+    {
+      "id": "integration",
+      "title": "Intégrer la bibliothèque C++",
+      "description": "Compiler, lier et interroger les composants indépendants de CyHWInfo.",
+      "section": "CyHWInfo",
+      "parent": "overview",
+      "order": 20,
+      "sourceRevision": "1",
+      "locale": "fr",
+      "html": "<h2 id=\"build\">Compiler un composant<a class=\"heading-anchor\" href=\"#/fr/integration/build\" aria-label=\"Lien vers Compiler un composant\">#</a></h2><p>Utilise CMake 3.22 ou supérieur, Git et un compilateur C++23. Pour la configuration Windows validée, utilise Visual Studio 2022 17.10 ou supérieur et un SDK Windows avec les en-têtes WDDM 2.4 et NVMe. CMake récupère la révision épinglée de <code>lfreist/hwinfo</code>. Le paramètre <code>FETCHCONTENT_SOURCE_DIR_LFREIST_HWINFO</code> permet de fournir une copie locale de cette révision.</p>\n<p>Exécute ces commandes depuis le dépôt CyHWInfo pour compiler l’inventaire et les mesures GPU.</p>\n<div class=\"code-block\"><div class=\"code-toolbar\"><span>powershell</span><button type=\"button\" data-copy-code>Copier</button></div><pre><code class=\"language-powershell\"><span class=\"code-line\" id=\"L1\" data-line=\"1\">cmake -S . -B out/gpu &quot;-DCYHWINFO_COMPONENTS=Gpu;GpuTelemetry&quot;</span><span class=\"code-line\" id=\"L2\" data-line=\"2\">cmake --build out/gpu --config Release</span><span class=\"code-line\" id=\"L3\" data-line=\"3\">cmake --install out/gpu --config Release --prefix out/install-gpu</span></code></pre></div><p>Ajoute le préfixe d’installation à <code>CMAKE_PREFIX_PATH</code> dans le projet qui utilise la bibliothèque.</p>\n<div class=\"code-block\"><div class=\"code-toolbar\"><span>cmake</span><button type=\"button\" data-copy-code>Copier</button></div><pre><code class=\"language-cmake\"><span class=\"code-line\" id=\"code-2-L1\" data-line=\"1\"><span class=\"token keyword\">find_package</span><span class=\"token punctuation\">(</span>CyHWInfo CONFIG REQUIRED COMPONENTS Gpu GpuTelemetry<span class=\"token punctuation\">)</span></span><span class=\"code-line\" id=\"code-2-L2\" data-line=\"2\"><span class=\"token keyword\">target_link_libraries</span><span class=\"token punctuation\">(</span>my_app <span class=\"token namespace\">PRIVATE</span> <span class=\"token inserted class-name\">CyHWInfo::Gpu</span> <span class=\"token inserted class-name\">CyHWInfo::GpuTelemetry</span><span class=\"token punctuation\">)</span></span></code></pre></div><p>Les collecteurs sélectionnables sont <code>Cpu</code>, <code>Gpu</code>, <code>GpuTelemetry</code>, <code>GpuProcesses</code>, <code>Memory</code>, <code>Storage</code>, <code>StorageHealth</code>, <code>Motherboard</code>, <code>Battery</code>, <code>Network</code> et le module Windows facultatif <code>LibreHardwareMonitor</code>. Le paquet exporte aussi <code>Core</code> et <code>All</code>. Les mesures et compteurs GPU activent automatiquement <code>Gpu</code>. <code>StorageHealth</code> active <code>Storage</code>.</p>\n<h2 id=\"readings\">Lire les valeurs matérielles<a class=\"heading-anchor\" href=\"#/fr/integration/readings\" aria-label=\"Lien vers Lire les valeurs matérielles\">#</a></h2><p>Inclus l’en-tête public correspondant sous <code>&lt;cyhwinfo/&gt;</code>. Utilise <code>gpu::enumerate()</code> pour découvrir les adaptateurs, puis passe leurs identifiants à <code>gpu::Sampler::open()</code> depuis <code>&lt;cyhwinfo/gpu_telemetry.hpp&gt;</code>. Conserve un collecteur par adaptateur et espace les appels pour les compteurs de débit. Vérifie le <code>Result</code> avant d’accéder à sa valeur. Chaque <code>Reading</code> fournit une valeur facultative, son état et sa source.</p>\n<p>Les identifiants des adaptateurs WDDM sont valables pour le démarrage courant. Le pourcentage de puissance D3DKMT et la puissance en watts fournie par les pilotes constructeur sont deux mesures distinctes. Sous Windows, la santé des disques couvre les périphériques NVMe et SATA directs lorsque le pilote expose l’accès SMART. Actualise l’inventaire après avoir reconnecté un disque.</p>\n<h2 id=\"advanced-groups\">Sélectionner les groupes avancés<a class=\"heading-anchor\" href=\"#/fr/integration/advanced-groups\" aria-label=\"Lien vers Sélectionner les groupes avancés\">#</a></h2><p>Lie <code>CyHWInfo::LibreHardwareMonitor</code> et appelle <code>cyhwinfo_deploy_libre_hardware_monitor(my_app)</code> pour la cible exécutable. La compilation exige le SDK .NET. Le collecteur déployé utilise .NET 8. Consulte les <a href=\"#/fr/monitoring/advanced-sensors\">capteurs avancés</a> pour l’accès au pilote.</p>\n<div class=\"code-block\"><div class=\"code-toolbar\"><span>cpp</span><button type=\"button\" data-copy-code>Copier</button></div><pre><code class=\"language-cpp\"><span class=\"code-line\" id=\"code-3-L1\" data-line=\"1\"><span class=\"token macro property\"><span class=\"token directive-hash\">#</span><span class=\"token directive keyword\">include</span> <span class=\"token string\">&lt;cyhwinfo/sensors.hpp></span></span></span><span class=\"code-line\" id=\"code-3-L2\" data-line=\"2\"> </span><span class=\"code-line\" id=\"code-3-L3\" data-line=\"3\"><span class=\"token keyword\">auto</span> sampler <span class=\"token operator\">=</span> cyhwinfo<span class=\"token double-colon punctuation\">::</span>sensors<span class=\"token double-colon punctuation\">::</span><span class=\"token class-name\">Sampler</span><span class=\"token double-colon punctuation\">::</span><span class=\"token function\">open</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">{</span></span><span class=\"code-line\" id=\"code-3-L4\" data-line=\"4\">    <span class=\"token punctuation\">.</span>cpu <span class=\"token operator\">=</span> <span class=\"token boolean\">false</span><span class=\"token punctuation\">,</span> <span class=\"token punctuation\">.</span>motherboard <span class=\"token operator\">=</span> <span class=\"token boolean\">false</span><span class=\"token punctuation\">,</span> <span class=\"token punctuation\">.</span>memory <span class=\"token operator\">=</span> <span class=\"token boolean\">true</span></span><span class=\"code-line\" id=\"code-3-L5\" data-line=\"5\"><span class=\"token punctuation\">}</span><span class=\"token punctuation\">)</span><span class=\"token punctuation\">;</span></span><span class=\"code-line\" id=\"code-3-L6\" data-line=\"6\"><span class=\"token keyword\">if</span> <span class=\"token punctuation\">(</span>sampler<span class=\"token punctuation\">)</span> <span class=\"token punctuation\">{</span></span><span class=\"code-line\" id=\"code-3-L7\" data-line=\"7\">    <span class=\"token keyword\">auto</span> sample <span class=\"token operator\">=</span> sampler<span class=\"token operator\">-></span><span class=\"token function\">sample</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span><span class=\"token punctuation\">;</span></span><span class=\"code-line\" id=\"code-3-L8\" data-line=\"8\">    <span class=\"token keyword\">if</span> <span class=\"token punctuation\">(</span>sample <span class=\"token operator\">&amp;&amp;</span> sample<span class=\"token operator\">-></span>memory<span class=\"token punctuation\">)</span> <span class=\"token punctuation\">{</span></span><span class=\"code-line\" id=\"code-3-L9\" data-line=\"9\">        <span class=\"token keyword\">const</span> <span class=\"token keyword\">auto</span><span class=\"token operator\">&amp;</span> readings <span class=\"token operator\">=</span> sample<span class=\"token operator\">-></span>memory<span class=\"token operator\">-></span>sensors<span class=\"token punctuation\">;</span></span><span class=\"code-line\" id=\"code-3-L10\" data-line=\"10\">        <span class=\"token comment\">// Afficher les valeurs disponibles dans readings.</span></span><span class=\"code-line\" id=\"code-3-L11\" data-line=\"11\">    <span class=\"token punctuation\">}</span></span><span class=\"code-line\" id=\"code-3-L12\" data-line=\"12\"><span class=\"token punctuation\">}</span></span></code></pre></div><p>Le relevé indique aussi si PawnIO est installé et accessible. Un groupe est absent si son option est désactivée. Conserve le collecteur entre les appels successifs.</p>\n<h2 id=\"dashboard\">Intégrer le tableau de bord<a class=\"heading-anchor\" href=\"#/fr/integration/dashboard\" aria-label=\"Lien vers Intégrer le tableau de bord\">#</a></h2><p>Active <code>CYHWINFO_BUILD_UI</code> et fournis <code>CyUI::Core</code> ou une copie accessible de CyImgui_Interface. Lie <code>CyHWInfo::UI</code>. Avec une archive UI installée, utilise une compilation compatible de CyUI et ImGui. Active <code>CYHWINFO_BUILD_APP</code> pour compiler le moniteur Win32/Direct3D 11.</p>\n<p>Après avoir créé le contexte ImGui de l’application hôte et initialisé CyUI, appelle <code>cyhwinfo::ui::register_translations()</code>. Conserve un <code>Monitor</code> et un <code>Dashboard</code>. Appelle <code>dashboard.draw(monitor)</code> dans la fenêtre hôte, ou utilise <code>dashboard.draw_panel(Page::sensors, *monitor.snapshot())</code> pour intégrer uniquement le tableau des capteurs. Le moniteur collecte les données en arrière-plan et publie des instantanés immuables.</p>\n",
+      "text": "Compiler un composant # Utilise CMake 3.22 ou supérieur, Git et un compilateur C++23. Pour la configuration Windows validée, utilise Visual Studio 2022 17.10 ou supérieur et un SDK Windows avec les en-têtes WDDM 2.4 et NVMe. CMake récupère la révision épinglée de lfreist/hwinfo . Le paramètre FETCHCONTENT_SOURCE_DIR_LFREIST_HWINFO permet de fournir une copie locale de cette révision. Exécute ces commandes depuis le dépôt CyHWInfo pour compiler l’inventaire et les mesures GPU. powershell Copier cmake -S . -B out/gpu \"-DCYHWINFO_COMPONENTS=Gpu;GpuTelemetry\" cmake --build out/gpu --config Release cmake --install out/gpu --config Release --prefix out/install-gpu Ajoute le préfixe d’installation à CMAKE_PREFIX_PATH dans le projet qui utilise la bibliothèque. cmake Copier find_package ( CyHWInfo CONFIG REQUIRED COMPONENTS Gpu GpuTelemetry ) target_link_libraries ( my_app PRIVATE CyHWInfo::Gpu CyHWInfo::GpuTelemetry ) Les collecteurs sélectionnables sont Cpu , Gpu , GpuTelemetry , GpuProcesses , Memory , Storage , StorageHealth , Motherboard , Battery , Network et le module Windows facultatif LibreHardwareMonitor . Le paquet exporte aussi Core et All . Les mesures et compteurs GPU activent automatiquement Gpu . StorageHealth active Storage . Lire les valeurs matérielles # Inclus l’en-tête public correspondant sous <cyhwinfo/> . Utilise gpu::enumerate() pour découvrir les adaptateurs, puis passe leurs identifiants à gpu::Sampler::open() depuis <cyhwinfo/gpu_telemetry.hpp> . Conserve un collecteur par adaptateur et espace les appels pour les compteurs de débit. Vérifie le Result avant d’accéder à sa valeur. Chaque Reading fournit une valeur facultative, son état et sa source. Les identifiants des adaptateurs WDDM sont valables pour le démarrage courant. Le pourcentage de puissance D3DKMT et la puissance en watts fournie par les pilotes constructeur sont deux mesures distinctes. Sous Windows, la santé des disques couvre les périphériques NVMe et SATA directs lorsque le pilote expose l’accès SMART. Actualise l’inventaire après avoir reconnecté un disque. Sélectionner les groupes avancés # Lie CyHWInfo::LibreHardwareMonitor et appelle cyhwinfo_deploy_libre_hardware_monitor(my_app) pour la cible exécutable. La compilation exige le SDK .NET. Le collecteur déployé utilise .NET 8. Consulte les capteurs avancés pour l’accès au pilote. cpp Copier # include <cyhwinfo/sensors.hpp> auto sampler = cyhwinfo :: sensors :: Sampler :: open ( { . cpu = false , . motherboard = false , . memory = true } ) ; if ( sampler ) { auto sample = sampler -> sample ( ) ; if ( sample && sample -> memory ) { const auto & readings = sample -> memory -> sensors ; // Afficher les valeurs disponibles dans readings. } } Le relevé indique aussi si PawnIO est installé et accessible. Un groupe est absent si son option est désactivée. Conserve le collecteur entre les appels successifs. Intégrer le tableau de bord # Active CYHWINFO_BUILD_UI et fournis CyUI::Core ou une copie accessible de CyImgui_Interface. Lie CyHWInfo::UI . Avec une archive UI installée, utilise une compilation compatible de CyUI et ImGui. Active CYHWINFO_BUILD_APP pour compiler le moniteur Win32/Direct3D 11. Après avoir créé le contexte ImGui de l’application hôte et initialisé CyUI, appelle cyhwinfo::ui::register_translations() . Conserve un Monitor et un Dashboard . Appelle dashboard.draw(monitor) dans la fenêtre hôte, ou utilise dashboard.draw_panel(Page::sensors, *monitor.snapshot()) pour intégrer uniquement le tableau des capteurs. Le moniteur collecte les données en arrière-plan et publie des instantanés immuables. cmake -S . -B out/gpu \"-DCYHWINFO_COMPONENTS=Gpu;GpuTelemetry\" cmake --build out/gpu --config Release cmake --install out/gpu --config Release --prefix out/install-gpu find_package(CyHWInfo CONFIG REQUIRED COMPONENTS Gpu GpuTelemetry) target_link_libraries(my_app PRIVATE CyHWInfo::Gpu CyHWInfo::GpuTelemetry) #include <cyhwinfo/sensors.hpp> auto sampler = cyhwinfo::sensors::Sampler::open({ .cpu = false, .motherboard = false, .memory = true }); if (sampler) { auto sample = sampler->sample(); if (sample && sample->memory) { const auto& readings = sample->memory->sensors; // Afficher les valeurs disponibles dans readings. } }",
+      "headings": [
+        {
+          "id": "build",
+          "text": "Compiler un composant",
+          "level": 2
+        },
+        {
+          "id": "readings",
+          "text": "Lire les valeurs matérielles",
+          "level": 2
+        },
+        {
+          "id": "advanced-groups",
+          "text": "Sélectionner les groupes avancés",
+          "level": 2
+        },
+        {
+          "id": "dashboard",
+          "text": "Intégrer le tableau de bord",
+          "level": 2
+        }
+      ],
+      "anchors": [
+        "L1",
+        "L2",
+        "L3",
+        "code-2-L1",
+        "code-2-L2",
+        "code-3-L1",
+        "code-3-L2",
+        "code-3-L3",
+        "code-3-L4",
+        "code-3-L5",
+        "code-3-L6",
+        "code-3-L7",
+        "code-3-L8",
+        "code-3-L9",
+        "code-3-L10",
+        "code-3-L11",
+        "code-3-L12"
+      ],
+      "languages": [
+        "powershell",
+        "cmake",
+        "cpp"
+      ],
+      "code": "cmake -S . -B out/gpu \"-DCYHWINFO_COMPONENTS=Gpu;GpuTelemetry\"\ncmake --build out/gpu --config Release\ncmake --install out/gpu --config Release --prefix out/install-gpu\nfind_package(CyHWInfo CONFIG REQUIRED COMPONENTS Gpu GpuTelemetry)\ntarget_link_libraries(my_app PRIVATE CyHWInfo::Gpu CyHWInfo::GpuTelemetry)\n#include <cyhwinfo/sensors.hpp>\n\nauto sampler = cyhwinfo::sensors::Sampler::open({\n    .cpu = false, .motherboard = false, .memory = true\n});\nif (sampler) {\n    auto sample = sampler->sample();\n    if (sample && sample->memory) {\n        const auto& readings = sample->memory->sensors;\n        // Afficher les valeurs disponibles dans readings.\n    }\n}",
+      "assets": [],
+      "links": [
+        "#/fr/monitoring/advanced-sensors"
+      ],
+      "kind": "guide",
+      "revision": "7b253b266843"
+    },
+    {
+      "id": "monitoring",
+      "title": "Surveiller le matériel",
+      "description": "Lire le tableau Capteurs et activer les collecteurs Windows facultatifs.",
+      "section": "CyHWInfo",
+      "parent": "overview",
+      "order": 10,
+      "sourceRevision": "1",
+      "locale": "fr",
+      "html": "<h2 id=\"sensor-table\">Capteurs et statistiques<a class=\"heading-anchor\" href=\"#/fr/monitoring/sensor-table\" aria-label=\"Lien vers Capteurs et statistiques\">#</a></h2><p>Déplie un périphérique ou un groupe de mesures dans <strong>Capteurs</strong>. Le tableau affiche <strong>Actuel</strong>, <strong>Minimum</strong>, <strong>Maximum</strong> et <strong>Moyenne</strong>. Utilise le champ de recherche pour retrouver un périphérique ou un capteur. <strong>Mesures disponibles</strong> masque les lignes sans relevé actuel. Survole un capteur pour voir sa source.</p>\n<figure data-cydoc-module=\"image\" data-cydoc-id=\"sensor-table-example\" data-config=\"{&quot;id&quot;:&quot;sensor-table-example&quot;,&quot;src&quot;:&quot;assets/sensors-fr.png&quot;,&quot;alt&quot;:&quot;Tableau des capteurs avec les pourcentages des états C par cœur et leurs statistiques sur des données de démonstration&quot;,&quot;caption&quot;:&quot;Tableau Capteurs avec des données de démonstration&quot;,&quot;controls&quot;:&quot;minimal&quot;}\"><img src=\"assets/sensors-fr.png\" alt=\"Tableau des capteurs avec les pourcentages des états C par cœur et leurs statistiques sur des données de démonstration\" loading=\"lazy\" decoding=\"async\"></figure><p>Les statistiques portent sur les relevés valides depuis le début de la session ou la dernière <strong>Réinitialisation des statistiques</strong>. Chaque lecture SMART réelle compte une seule fois, même si le collecteur réutilise sa valeur. La pause suspend les relevés. La réinitialisation efface les statistiques et conserve la valeur actuelle. Un tiret indique une donnée indisponible. Zéro est une valeur valide, par exemple pour un ventilateur arrêté. Les indicateurs binaires affichent Oui ou Non et mémorisent les états observés.</p>\n<h2 id=\"advanced-sensors\">Capteurs avancés sous Windows<a class=\"heading-anchor\" href=\"#/fr/monitoring/advanced-sensors\" aria-label=\"Lien vers Capteurs avancés sous Windows\">#</a></h2><ol>\n<li>Compile le composant <code>LibreHardwareMonitor</code> et déploie le dossier <code>cyhwinfo-lhm</code> à côté de l’exécutable. Installe le runtime .NET 8 requis par le collecteur.</li>\n<li>Pour les relevés qui nécessitent un accès au matériel, installe le <a href=\"https://pawnio.eu/\" target=\"_blank\" rel=\"noopener noreferrer\">pilote signé PawnIO</a>, distribué séparément. La session Windows doit pouvoir accéder à son périphérique. Des droits administrateur peuvent être nécessaires.</li>\n<li>Dans l’application, active <strong>Paramètres → Capteurs avancés</strong>. Désactive cette option pour continuer avec les collecteurs standard.</li>\n</ol>\n<p>Les relevés disponibles dépendent du matériel, du firmware, des pilotes et des droits d’accès. LibreHardwareMonitor peut fournir les températures et la puissance CPU ainsi que les tensions, températures et vitesses des ventilateurs de la carte mère. Sur les AMD Raphael pris en charge, le collecteur facultatif ajoute les timings actifs du contrôleur DDR5 et les indicateurs HTC, PROCHOT interne et PROCHOT externe. La table SMU <code>0x00540004</code> ajoute les températures par cœur, les limites et l’utilisation PPT/TDC/EDC, les débits DRAM en lecture et en écriture et les résidences C0, C1 et C6 par cœur.</p>\n<p>La valeur actuelle du <strong>Nombre moyen de cœurs actifs</strong> additionne les fractions de temps passées en C0 par les cœurs physiques pendant un même intervalle SMU. Deux cœurs qui passent chacun la moitié de cet intervalle en C0 comptent pour un cœur actif en moyenne. La colonne <strong>Moyenne</strong> calcule la moyenne de ces relevés sur la session.</p>\n",
+      "text": "Capteurs et statistiques # Déplie un périphérique ou un groupe de mesures dans Capteurs . Le tableau affiche Actuel , Minimum , Maximum et Moyenne . Utilise le champ de recherche pour retrouver un périphérique ou un capteur. Mesures disponibles masque les lignes sans relevé actuel. Survole un capteur pour voir sa source. Les statistiques portent sur les relevés valides depuis le début de la session ou la dernière Réinitialisation des statistiques . Chaque lecture SMART réelle compte une seule fois, même si le collecteur réutilise sa valeur. La pause suspend les relevés. La réinitialisation efface les statistiques et conserve la valeur actuelle. Un tiret indique une donnée indisponible. Zéro est une valeur valide, par exemple pour un ventilateur arrêté. Les indicateurs binaires affichent Oui ou Non et mémorisent les états observés. Capteurs avancés sous Windows # Compile le composant LibreHardwareMonitor et déploie le dossier cyhwinfo-lhm à côté de l’exécutable. Installe le runtime .NET 8 requis par le collecteur. Pour les relevés qui nécessitent un accès au matériel, installe le pilote signé PawnIO , distribué séparément. La session Windows doit pouvoir accéder à son périphérique. Des droits administrateur peuvent être nécessaires. Dans l’application, active Paramètres → Capteurs avancés . Désactive cette option pour continuer avec les collecteurs standard. Les relevés disponibles dépendent du matériel, du firmware, des pilotes et des droits d’accès. LibreHardwareMonitor peut fournir les températures et la puissance CPU ainsi que les tensions, températures et vitesses des ventilateurs de la carte mère. Sur les AMD Raphael pris en charge, le collecteur facultatif ajoute les timings actifs du contrôleur DDR5 et les indicateurs HTC, PROCHOT interne et PROCHOT externe. La table SMU 0x00540004 ajoute les températures par cœur, les limites et l’utilisation PPT/TDC/EDC, les débits DRAM en lecture et en écriture et les résidences C0, C1 et C6 par cœur. La valeur actuelle du Nombre moyen de cœurs actifs additionne les fractions de temps passées en C0 par les cœurs physiques pendant un même intervalle SMU. Deux cœurs qui passent chacun la moitié de cet intervalle en C0 comptent pour un cœur actif en moyenne. La colonne Moyenne calcule la moyenne de ces relevés sur la session.",
+      "headings": [
+        {
+          "id": "sensor-table",
+          "text": "Capteurs et statistiques",
+          "level": 2
+        },
+        {
+          "id": "advanced-sensors",
+          "text": "Capteurs avancés sous Windows",
+          "level": 2
+        }
+      ],
+      "anchors": [],
+      "languages": [],
+      "code": "",
+      "assets": [
+        "assets/sensors-fr.png"
+      ],
+      "links": [
+        "https://pawnio.eu/"
+      ],
+      "kind": "media",
+      "revision": "55794f85319e"
+    },
+    {
+      "id": "overview",
+      "title": "Premiers pas",
+      "description": "Choisir entre le moniteur Windows et la bibliothèque C++.",
+      "section": "CyHWInfo",
+      "order": 0,
+      "sourceRevision": "1",
+      "locale": "fr",
+      "html": "<h2 id=\"what-you-can-build\">Ce que tu peux intégrer<a class=\"heading-anchor\" href=\"#/fr/overview/what-you-can-build\" aria-label=\"Lien vers Ce que tu peux intégrer\">#</a></h2><p>CyHWInfo est une bibliothèque C++23 modulaire pour l’inventaire matériel et la lecture des capteurs. Lie les composants dont ton application a besoin, par exemple l’inventaire et les mesures GPU. Le module CyUI facultatif fournit un tableau de bord intégrable. Le moniteur Windows autonome utilise le même tableau de bord et les mêmes collecteurs.</p>\n<h2 id=\"open-the-monitor\">Ouvrir le moniteur<a class=\"heading-anchor\" href=\"#/fr/overview/open-the-monitor\" aria-label=\"Lien vers Ouvrir le moniteur\">#</a></h2><p>Dans une version Windows de l’application, lance <code>CyHWInfo.exe</code>. L’application ouvre la page <strong>Capteurs</strong>. Déplie un composant pour voir les périphériques et leurs relevés. Le menu <strong>Paramètres → Langue</strong> permet de choisir le français ou l’anglais.</p>\n<p>Les collecteurs de base fonctionnent sans PawnIO. Les capteurs avancés facultatifs utilisent PawnIO pour lire davantage de données du processeur, de la carte mère et de la mémoire sur le matériel pris en charge. Consulte les <a href=\"#/fr/monitoring/advanced-sensors\">capteurs avancés</a> pour la configuration et la compatibilité.</p>\n<h2 id=\"next\">Pour continuer<a class=\"heading-anchor\" href=\"#/fr/overview/next\" aria-label=\"Lien vers Pour continuer\">#</a></h2><ul>\n<li><a href=\"#/fr/monitoring/sensor-table\">Lire les capteurs et les statistiques de session</a>.</li>\n<li><a href=\"#/fr/integration/build\">Compiler la bibliothèque et choisir les composants CMake</a>.</li>\n<li><a href=\"#/fr/integration/dashboard\">Intégrer le tableau de bord</a>.</li>\n</ul>\n",
+      "text": "Ce que tu peux intégrer # CyHWInfo est une bibliothèque C++23 modulaire pour l’inventaire matériel et la lecture des capteurs. Lie les composants dont ton application a besoin, par exemple l’inventaire et les mesures GPU. Le module CyUI facultatif fournit un tableau de bord intégrable. Le moniteur Windows autonome utilise le même tableau de bord et les mêmes collecteurs. Ouvrir le moniteur # Dans une version Windows de l’application, lance CyHWInfo.exe . L’application ouvre la page Capteurs . Déplie un composant pour voir les périphériques et leurs relevés. Le menu Paramètres → Langue permet de choisir le français ou l’anglais. Les collecteurs de base fonctionnent sans PawnIO. Les capteurs avancés facultatifs utilisent PawnIO pour lire davantage de données du processeur, de la carte mère et de la mémoire sur le matériel pris en charge. Consulte les capteurs avancés pour la configuration et la compatibilité. Pour continuer # Lire les capteurs et les statistiques de session . Compiler la bibliothèque et choisir les composants CMake . Intégrer le tableau de bord .",
+      "headings": [
+        {
+          "id": "what-you-can-build",
+          "text": "Ce que tu peux intégrer",
+          "level": 2
+        },
+        {
+          "id": "open-the-monitor",
+          "text": "Ouvrir le moniteur",
+          "level": 2
+        },
+        {
+          "id": "next",
+          "text": "Pour continuer",
+          "level": 2
+        }
+      ],
+      "anchors": [],
+      "languages": [],
+      "code": "",
+      "assets": [],
+      "links": [
+        "#/fr/monitoring/advanced-sensors",
+        "#/fr/monitoring/sensor-table",
+        "#/fr/integration/build",
+        "#/fr/integration/dashboard"
+      ],
+      "kind": "guide",
+      "revision": "996a2400dc11"
+    }
+  ]
+}

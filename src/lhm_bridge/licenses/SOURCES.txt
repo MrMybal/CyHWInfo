@@ -1,0 +1,47 @@
+CyHWInfo optional LibreHardwareMonitor sensor bridge
+===================================================
+
+The CyHWInfo code is under the CyHWInfo MIT license. This directory accompanies
+the framework-dependent bridge and describes licenses for its dependencies.
+
+MPL-2.0 binaries and corresponding sources (unmodified NuGet packages):
+- LibreHardwareMonitorLib 0.9.6
+  https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/tree/3d331e3370efb858411f19511373eff65a218701
+- DiskInfoToolkit 1.1.2
+  https://github.com/Blacktempel/DiskInfoToolkit/tree/25319eae5781e75bcf141e844ceab2afe94d40ea
+- BlackSharp.Core 1.0.7
+  https://github.com/Blacktempel/BlackSharp/tree/c70b735c6cec123ee8a046ac4a0bc6c606f52cf0
+- RAMSPDToolkit-NDD 1.4.2
+  https://github.com/Blacktempel/RAMSPDToolkit/tree/3b47b960e0830fef344624ad5e389675d5f0a1ce
+
+Their MPL text is in MPL-2.0.txt. LibreHardwareMonitor's own notices, including
+the license for its embedded PawnIO modules, are in
+LibreHardwareMonitor-THIRD-PARTY-NOTICES.txt.
+PawnIO module sources and releases are available at:
+  https://github.com/namazso/PawnIO.Modules
+The PawnIO driver has separate terms and is installed separately.
+
+Public hardware layout references for the CyHWInfo Raphael decoder:
+  https://github.com/joaoregis/cpuzeez/blob/1dd83816243d00e31e588fc68fbc3f66a6c998aa/crates/core/src/sensors/amd_pm.rs
+  https://github.com/jfroy/ddrs/blob/2151ac5e7e224d24fcf9dcf79b22424e5ebff1ee/src/timings.rs
+  AMD THM register offset and live flag masks:
+  https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/amd/include/asic_reg/thm/thm_13_0_2_offset.h
+  https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/amd/include/asic_reg/thm/thm_13_0_2_sh_mask.h
+  The DRAM bandwidth cells in Raphael SMU table 0x00540004 were identified
+  with separate read and non-temporal write workloads on a Ryzen 9 7900X.
+  Core C0/CC1/CC6 layout, cross-checked against the Ryzen 9 7900X SMU readings:
+  https://github.com/intelfx/ryzen_monitor/blob/c0780f7c181426c8e6eb6e273ee12f2527849b22/src/pm_tables_zen4.c
+
+HidSharp 2.6.4 is distributed under the accompanying HidSharp-LICENSE.txt
+from its NuGet package. Mono.Posix.NETStandard 1.0.0 points to the Mono license
+reproduced in Mono.Posix.NETStandard-LICENSE.txt.
+  https://www.nuget.org/packages/HidSharp/2.6.4
+  https://www.nuget.org/packages/Mono.Posix.NETStandard/1.0.0
+  https://go.microsoft.com/fwlink/?linkid=869050
+
+The .NET apphost and System.CodeDom, System.IO.Ports, System.Management,
+System.Threading.AccessControl and related runtime assets use the .NET MIT
+license. See dotnet-MIT.txt and the .NET third-party license notices.
+  https://github.com/dotnet/runtime
+  https://github.com/dotnet/dotnet/tree/44525024595742ebe09023abe709df51de65009b
+  https://github.com/dotnet/dotnet/tree/c2435c3e0f46de784341ac3ed62863ce77e117b4

@@ -1,0 +1,13 @@
+{
+  "name": "CyHWInfo",
+  "version": "0.1.0",
+  "defaultLocale": "en",
+  "locales": [
+    { "code": "en", "label": "English" },
+    { "code": "fr", "label": "Français" }
+  ],
+  "homePage": "overview",
+  "content": "manual",
+  "out": "../Documentation",
+  "modules": ["image"]
+}
