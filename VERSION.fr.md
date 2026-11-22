@@ -6,6 +6,7 @@
 
 - Bibliothèque C++23 modulaire avec des cibles CMake pour l’inventaire matériel et les mesures.
 - Tableau de bord CyUI et moniteur de capteurs Windows facultatifs.
+- Installateur Windows x64 et mises à jour depuis l’application via les releases GitHub, avec vérification SHA-256.
 - Intégration facultative de LibreHardwareMonitor et de PawnIO pour des mesures supplémentaires du processeur, de la carte mère et de la mémoire.
 - Relevés AMD Raphael pour les températures par cœur, PPT/TDC/EDC, HTC et PROCHOT, les timings DDR5 actifs, la bande passante DRAM et les résidences des états C sur les tables prises en charge.
 

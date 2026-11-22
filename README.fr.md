@@ -35,6 +35,8 @@ PawnIO est optionnel. Le moniteur Windows peut utiliser les collecteurs standard
 
 ## Installation
 
+La page [Releases GitHub](https://github.com/MrMybal/CyHWInfo/releases) distribue l’installateur Windows x64. L’installateur ajoute CyHWInfo au menu Démarrer et aux applications installées. Dans le moniteur, **Mises à jour** recherche la dernière version stable, vérifie le SHA‑256 de l’installateur publié par GitHub et lance l’installation à la demande. Une copie installée se ferme puis se rouvre après une mise à jour réussie. Les capteurs avancés nécessitent toujours le runtime .NET 8 et, selon les relevés, le pilote facultatif PawnIO.
+
 Le projet est disponible sous forme de sources. Utilise Git, CMake 3.22 ou supérieur et un compilateur C++23. La compilation Windows validée utilise Visual Studio 2022 17.10 ou supérieur et un SDK Windows avec les en-têtes WDDM 2.4 et NVMe.
 
 ```powershell
@@ -66,6 +68,10 @@ cmake --install out/app --config Release --prefix out/install-app
 ```
 
 Pour inclure le collecteur avancé, ajoute `LibreHardwareMonitor` aux composants sélectionnés. Sa compilation exige un SDK compatible .NET 8 et le collecteur déployé utilise le runtime .NET 8. Installe séparément le [pilote signé PawnIO](https://pawnio.eu/) pour les relevés qui le nécessitent. Consulte le [guide de surveillance](Documentation/Documentation.html#/fr/monitoring/advanced-sensors).
+
+### Générer une version Windows
+
+Installe Inno Setup 6 et exécute `./scripts/package-windows.ps1` avec une copie de CyUI accessible. L’installateur est généré dans `out/windows-dist`. Le workflow **Windows release** compile et teste l’installateur. Un lancement manuel produit un artefact de test. Pousser un tag `vX.Y.Z` qui correspond à la version du projet CMake publie une release stable sur GitHub.
 
 ---
 

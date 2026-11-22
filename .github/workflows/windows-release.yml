@@ -1,0 +1,91 @@
+name: Windows release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: MrMybal/CyUI
+          ref: e8ccec0a96ed820fc46e86059e010efafcef687e
+          path: out/CyUI
+          persist-credentials: false
+      - name: Build Windows x64 installer
+        shell: pwsh
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $options = @{ CyUISourceDir = 'out/CyUI' }
+          if ($env:REF_TYPE -eq 'tag') { $options.ReleaseTag = $env:REF_NAME }
+          ./scripts/package-windows.ps1 @options
+      - name: Verify setup and uninstall
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem -Path out/windows-dist -Filter 'CyHWInfo-*-windows-x64-setup.exe'
+          if (@($setup).Count -ne 1) { throw 'Expected one Windows installer.' }
+          $install = Join-Path $env:RUNNER_TEMP 'CyHWInfo-install-test'
+          $flags = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LANG=english', ('/DIR="' + $install + '"'))
+          $process = Start-Process -FilePath $setup.FullName -ArgumentList $flags -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Setup failed with exit code $($process.ExitCode)." }
+          foreach ($file in 'bin/CyHWInfo.exe', 'bin/cyhwinfo-lhm/CyHWInfo.SensorBridge.exe', 'bin/Documentation/Documentation.html') {
+            if (-not (Test-Path -LiteralPath (Join-Path $install $file) -PathType Leaf)) { throw "Setup did not install $file." }
+          }
+          $stage = Get-ChildItem -LiteralPath out/windows-release -Directory -Filter 'install-*'
+          $actual = Get-FileHash -LiteralPath (Join-Path $install 'bin/CyHWInfo.exe')
+          $expected = Get-FileHash -LiteralPath (Join-Path $stage.FullName 'bin/CyHWInfo.exe')
+          if ($actual.Hash -ne $expected.Hash) { throw 'Installed executable differs from the build.' }
+          $uninstall = Join-Path $install 'unins000.exe'
+          $process = Start-Process -FilePath $uninstall -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or (Test-Path -LiteralPath $actual.Path)) { throw 'Uninstall failed.' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: CyHWInfo-windows-x64
+          path: out/windows-dist/CyHWInfo-*-windows-x64-setup.exe
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: CyHWInfo-windows-x64
+          path: dist
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $version = $env:RELEASE_TAG.Substring(1)
+          $setup = "dist/CyHWInfo-$version-windows-x64-setup.exe"
+          gh release create $env:RELEASE_TAG $setup --verify-tag --generate-notes --draft
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release preparation failed.' }
+          $assets = gh api --paginate "repos/$env:GH_REPO/releases?per_page=100" --jq '.[] | [.tag_name, .draft, .assets[0].digest] | @tsv'
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release digest verification failed.' }
+          $digest = 'sha256:' + (Get-FileHash -LiteralPath $setup).Hash.ToLowerInvariant()
+          $expected = @($env:RELEASE_TAG, 'true', $digest) -join [char]9
+          if ($assets -cnotcontains $expected) { throw 'The uploaded installer SHA-256 differs from the build.' }
+          gh release edit $env:RELEASE_TAG --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release publication failed.' }

@@ -48,15 +48,31 @@ if(CYHWINFO_BUILD_APP)
     if(NOT TARGET cyui_imgui)
         message(FATAL_ERROR "The standalone application needs CyUI's bundled ImGui and its matching backends")
     endif()
+    if(NOT TARGET nlohmann_json::nlohmann_json)
+        if(POLICY CMP0135)
+            cmake_policy(SET CMP0135 NEW)
+        endif()
+        FetchContent_Declare(nlohmann_json
+            URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+            URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+        )
+        FetchContent_MakeAvailable(nlohmann_json)
+        install(FILES "${nlohmann_json_SOURCE_DIR}/LICENSE.MIT"
+            DESTINATION "${CMAKE_INSTALL_BINDIR}/licenses" RENAME nlohmann-json-LICENSE.txt)
+    endif()
     set(imgui_backends "${CYHWINFO_CYUI_SOURCE_DIR}/third_party/imgui/backends")
     add_executable(cyhwinfo_monitor WIN32
         app/main_win32.cpp
+        app/update_panel.cpp
+        app/updates.cpp
         "${imgui_backends}/imgui_impl_win32.cpp"
         "${imgui_backends}/imgui_impl_dx11.cpp")
     set_target_properties(cyhwinfo_monitor PROPERTIES OUTPUT_NAME CyHWInfo)
     target_include_directories(cyhwinfo_monitor PRIVATE "${imgui_backends}")
-    target_compile_definitions(cyhwinfo_monitor PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN UNICODE _UNICODE)
-    target_link_libraries(cyhwinfo_monitor PRIVATE CyHWInfo::UI CyUI::Core d3d11 dxgi d3dcompiler dwmapi shell32)
+    target_compile_definitions(cyhwinfo_monitor PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN UNICODE _UNICODE
+        CYHWINFO_APP_VERSION="${PROJECT_VERSION}")
+    target_link_libraries(cyhwinfo_monitor PRIVATE CyHWInfo::UI CyUI::Core nlohmann_json::nlohmann_json
+        d3d11 dxgi d3dcompiler dwmapi shell32 winhttp bcrypt ole32 advapi32)
     if(MSVC)
         target_compile_options(cyhwinfo_monitor PRIVATE /utf-8 /EHsc)
     endif()

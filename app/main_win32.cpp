@@ -1,5 +1,7 @@
 #include <cyhwinfo/ui.hpp>
 
+#include "update_panel.hpp"
+
 #include <cyui/Core.h>
 #include <imgui_impl_dx11.h>
 #include <imgui_impl_win32.h>
@@ -120,7 +122,7 @@ LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
     }
 }
 
-void frame(cyhwinfo::ui::Dashboard& dashboard, cyhwinfo::ui::Monitor& monitor) {
+bool frame(cyhwinfo::ui::Dashboard& dashboard, cyhwinfo::ui::Monitor& monitor, cyhwinfo::updates::Panel& updates) {
     const auto* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->Pos);
     ImGui::SetNextWindowSize(viewport->Size);
@@ -129,11 +131,16 @@ void frame(cyhwinfo::ui::Dashboard& dashboard, cyhwinfo::ui::Monitor& monitor) {
         ImGuiWindowFlags_NoBringToFrontOnFocus;
     const cyui::ScopedVar padding(ImGuiStyleVar_WindowPadding, {0, 0});
     const cyui::ScopedColor ground(ImGuiCol_WindowBg, cyui::palette().bg0);
+    bool updating = false;
     if (ImGui::Begin("CyHWInfo##dashboardHost", nullptr, flags)) {
-        dashboard.draw(monitor);
+        updating = updates.draw();
+        if (!updating) {
+            dashboard.draw(monitor);
+        }
     }
     ImGui::End();
     cyui::renderNotifications();
+    return updating;
 }
 
 } // namespace
@@ -206,6 +213,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     cyhwinfo::ui::Dashboard dashboard;
     dashboard.select(cyhwinfo::ui::Page::sensors);
     cyhwinfo::ui::Monitor sampler;
+    cyhwinfo::updates::Panel updates;
 
     int exit_code = 0;
     bool running = true;
@@ -241,8 +249,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
-        frame(dashboard, sampler);
+        const bool updating = frame(dashboard, sampler, updates);
         ImGui::Render();
+        if (updating) {
+            break;
+        }
         const auto status = graphics.present();
         occluded = status == DXGI_STATUS_OCCLUDED;
         if (FAILED(status)) {
